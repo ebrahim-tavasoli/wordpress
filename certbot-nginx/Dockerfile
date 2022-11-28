@@ -1,4 +1,4 @@
-FROM 3.9.15-bullseye
+FROM python:3.9.15-bullseye
 
 RUN pip install certbot-nginx
 
