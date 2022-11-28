@@ -1,0 +1,75 @@
+version: '3.3'
+
+services:
+  wp:
+    image: wordpress:php8.1-fpm
+    volumes:
+      - ./wp-data:/var/www/html
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: "${DB_USER}"
+      WORDPRESS_DB_PASSWORD: "${DB_PASSWORD}"
+      WORDPRESS_DB_NAME: "${DB_NAME}"
+    expose:
+      - 9000
+    depends_on:
+      - db
+    networks:
+      - wordpress
+
+  db:
+    image: mariadb:latest
+    volumes:
+      - ./wp-db:/var/lib/mysql
+      - ./mariadb:/etc/mysql/
+    environment:
+      MARIADB_USER: "${DB_USER}"
+      MARIADB_PASSWORD: "${DB_PASSWORD}"
+      MARIADB_DATABASE: "${DB_NAME}"
+    expose:
+      - 3306
+    networks:
+      - wordpress
+
+  adminer:
+    image: adminer:fastcgi
+    networks:
+      - wordpress
+    expose:
+      - 8000
+    depends_on:
+      - db
+
+  openresty:
+    image: openresty/openresty:bullseye
+    volumes:
+      - ./openresty/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+      - ./openresty/conf.d:/etc/nginx/conf.d/
+      - ./openresty:/etc/nginx
+      - ./letsencrypt:/etc/letsencrypt/
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - wordpress
+
+  certbot:
+    build:
+      context: ./certbot-nginx/
+      dockerfile: Dockerfile
+    volumes:
+      - ./openresty:/etc/nginx
+      - ./letsencrypt:/etc/letsencrypt/
+
+  wp-cli:
+    image: wordpress:cli
+    volumes:
+      - ./wp-data:/var/www/html
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: "${DB_USER}"
+      WORDPRESS_DB_PASSWORD: "${DB_PASSWORD}"
+      WORDPRESS_DB_NAME: "${DB_NAME}"
+
+networks:
+  wordpress:
